@@ -1,0 +1,53 @@
+{
+  "Comment": "Simple pseudo flow for flat a file",
+  "StartAt": "Try",
+  "States": {
+    "Try": {
+      "Type": "Parallel",
+      "Branches": [
+        {
+          "StartAt": "Process Data",
+          "States": {
+            "Process Data": {
+              "Type": "Task",
+              "Resource": "arn:aws:lambda:us-east-1:<YOUR_ACCOUNT_ID>:function:flat_json_file",
+              "Comment": "Process Data",
+              "ResultPath": "$.body.events_to_process",
+              "Next": "Update item status"
+            },
+            "Update item status": {
+              "Type": "Task",
+              "Resource": "arn:aws:lambda:us-east-1:<YOUR_ACCOUNT_ID>:function:update_key_status",
+              "ResultPath": "$.body.events_to_process",
+              "Next": "Add to pending files"
+            },
+            "Add to pending files": {
+              "Type": "Task",
+              "Resource": "arn:aws:lambda:us-east-1:<YOUR_ACCOUNT_ID>:function:add_to_pending_files_queue",
+              "Next": "Job Success"
+            },
+            "Job Success": {
+              "Type": "Succeed"
+            }
+          }
+        }
+      ],
+      "Catch": [
+        {
+          "ErrorEquals": [
+            "States.ALL"
+          ],
+          "ResultPath": null,
+          "Next": "Failed"
+        }
+      ],
+      "Next": "Done"
+    },
+    "Done": {
+      "Type": "Succeed"
+    },
+    "Failed": {
+      "Type": "Fail"
+    }
+  }
+}

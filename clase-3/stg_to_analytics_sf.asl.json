@@ -1,0 +1,74 @@
+{
+  "Comment": "Simple pseudo flow for dataeng demo",
+  "StartAt": "Try",
+  "States": {
+    "Try": {
+      "Type": "Parallel",
+      "Branches": [
+        {
+          "StartAt": "Process Data",
+          "States": {
+            "Process Data": {
+              "Type": "Task",
+              "Resource": "arn:aws:lambda:us-east-1:<YOUR_ACCOUNT_ID>:function:process_data",
+              "Comment": "Process Data",
+              "ResultPath": "$.body.job",
+              "Next": "Wait"
+            },
+            "Wait": {
+              "Type": "Wait",
+              "Seconds": 15,
+              "Next": "Get Job status"
+            },
+            "Get Job status": {
+              "Type": "Task",
+              "Resource": "arn:aws:lambda:us-east-1:<YOUR_ACCOUNT_ID>:function:check_job_status",
+              "ResultPath": "$.body.job",
+              "Next": "Did Job finish?"
+            },
+            "Did Job finish?": {
+              "Type": "Choice",
+              "Choices": [
+                {
+                  "Variable": "$.body.job.jobDetails.jobStatus",
+                  "StringEquals": "SUCCEEDED",
+                  "Next": "Job Success"
+                },
+                {
+                  "Variable": "$.body.job.jobDetails.jobStatus",
+                  "StringEquals": "FAILED",
+                  "Next": "Job Failed"
+                }
+              ],
+              "Default": "Wait"
+            },
+            "Job Failed": {
+              "Type": "Fail",
+              "Error": "Job Failed",
+              "Cause": "Job failed, please check the logs"
+            },
+            "Job Success": {
+              "Type": "Succeed"
+            }
+          }
+        }
+      ],
+      "Catch": [
+        {
+          "ErrorEquals": [
+            "States.ALL"
+          ],
+          "ResultPath": null,
+          "Next": "Failed"
+        }
+      ],
+      "Next": "Done"
+    },
+    "Done": {
+      "Type": "Succeed"
+    },
+    "Failed": {
+      "Type": "Fail"
+    }
+  }
+}
